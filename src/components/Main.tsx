@@ -265,7 +265,7 @@ export default function Main() {
       }}
       className="h-screen bg-slate-800 flex flex-col items-center justify-center"
     >
-      {!isConnected || chain?.id !== base.id ? (
+      {!isConnected ? (
         <ConnectButton />
       ) : (
         <div className="">
@@ -440,8 +440,7 @@ export default function Main() {
               </div>
             )}
           </div>
-
-          {!isTxSuccess && (
+          {isTxSuccess && (
             <div className="mt-4 flex flex-col items-center">
               <p className="text-lime-500 text-center">
                 Transaction successful!
