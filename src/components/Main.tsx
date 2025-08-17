@@ -266,9 +266,11 @@ export default function Main() {
       className="h-screen bg-slate-800 flex flex-col items-center justify-center"
     >
       {!isConnected ? (
-        <ConnectButton />
+        <Connect />
+      ) : chainId !== base.id ? (
+        <Switch />
       ) : (
-        <div className="">
+        <div>
           <h1 className="fixed top-0 left-1/2 -translate-x-1/2 text-2xl font-bold text-white mt-8">
             Farcaster Pro
           </h1>
@@ -483,18 +485,14 @@ export default function Main() {
     </div>
   );
 
-  function ConnectButton() {
+  function Connect() {
     const { connect } = useConnect();
     const [isClicked, setIsClicked] = useState(false);
 
     const handleConnect = () => {
       setIsClicked(true);
       setTimeout(() => {
-        if (chainId !== base.id) {
-          switchChain({ chainId: base.id });
-        } else {
-          connect({ connector: config.connectors[0] });
-        }
+        connect({ connector: config.connectors[0] });
       }, 500);
 
       setTimeout(() => setIsClicked(false), 500);
@@ -540,9 +538,80 @@ export default function Main() {
                 d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
               />
             </svg>{" "}
-            <span className="relative z-10">
-              {chainId !== base.id ? "Switch to Base" : "Connect Wallet"}
-            </span>
+            <span className="relative z-10"> {`Connect Wallet`}</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6 relative z-10"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
+              />
+            </svg>{" "}
+          </div>
+        </button>
+      </div>
+    );
+  }
+
+  function Switch() {
+    const [isClicked, setIsClicked] = useState(false);
+
+    const handleConnect = () => {
+      setIsClicked(true);
+      setTimeout(() => {
+        switchChain({ chainId: base.id });
+      }, 500);
+
+      setTimeout(() => setIsClicked(false), 500);
+    };
+
+    return (
+      <div className="flex flex-col mt-2">
+        <button
+          onClick={handleConnect}
+          className="text-white text-center py-2 rounded-xl font-semibold text-lg shadow-lg relative overflow-hidden transform transition-all duration-200 hover:scale-110 active:scale-95 flex items-center justify-center gap-2"
+          style={{
+            background:
+              "linear-gradient(90deg, #8B5CF6, #7C3AED, #A78BFA, #8B5CF6)",
+            backgroundSize: "300% 100%",
+            animation: "gradientAnimation 3s infinite ease-in-out",
+          }}
+        >
+          <div
+            className={`absolute inset-0 bg-[#38BDF8] transition-all duration-500 ${
+              isClicked ? "scale-x-100" : "scale-x-0"
+            }`}
+            style={{ transformOrigin: "center" }}
+          ></div>
+          <style>{`
+              @keyframes gradientAnimation {
+                0% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+                100% { background-position: 0% 50%; }
+              }
+            `}</style>
+          <div className="flex flex-row gap-2 px-5">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6 relative z-10"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
+              />
+            </svg>{" "}
+            <span className="relative z-10">Switch to Base</span>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
