@@ -1,0 +1,1 @@
+## A mini app to subscribe to Farcaster Pro
