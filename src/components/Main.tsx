@@ -255,6 +255,29 @@ export default function Main() {
     setTimeout(() => setBaseClicked(false), 500);
   };
 
+  async function sendMessage() {
+    const res = await fetch("/api/dc", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "idempotency-key": crypto.randomUUID(),
+      },
+      body: JSON.stringify({
+        recipientFid: context?.user?.fid,
+        message: `Trasaction successful!\n Basescan: https://basescan.org/tx/${hash}`,
+      }),
+    });
+
+    const data = await res.json();
+    console.log("Sent message:", data);
+  }
+
+  useEffect(() => {
+    if (isTxSuccess && hash) {
+      sendMessage();
+    }
+  }, [isTxSuccess, hash]);
+
   return (
     <div
       style={{
