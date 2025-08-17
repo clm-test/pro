@@ -5,8 +5,6 @@ export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Required headers: Authorization + idempotency-key
-    const authHeader = req.headers.get("authorization");
     const idempotencyKey = req.headers.get("idempotency-key");
 
     if (!idempotencyKey) {
@@ -36,9 +34,9 @@ export async function PUT(req: NextRequest) {
     }
 
     return NextResponse.json(data, { status: 200 });
-  } catch (err: any) {
+  } catch {
     return NextResponse.json(
-      { error: err.message || "Unexpected error" },
+      { error: "An unexpected error occurred while processing your request." },
       { status: 500 }
     );
   }
