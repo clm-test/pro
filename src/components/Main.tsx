@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   useAccount,
   useReadContract,
@@ -13,6 +13,7 @@ import { config } from "~/components/providers/WagmiProvider";
 import sdk, { type Context } from "@farcaster/miniapp-sdk";
 import { abi } from "../contracts/keyRegistry.js";
 import { formatUnits } from "viem";
+import { useSearchParams } from "next/navigation";
 
 const TIER_REGISTRY_ADDRESS = "0x00000000fc84484d585C3cF48d213424DFDE43FD";
 const tierRegistryAbi = abi;
@@ -53,6 +54,9 @@ export default function Main() {
     const load = async () => {
       const context = await sdk.context;
       setContext(context);
+      if (context?.user?.fid) {
+        setFid(context.user.fid);
+      }
 
       sdk.actions.ready({});
     };
@@ -65,7 +69,7 @@ export default function Main() {
     }
   }, [isSDKLoaded]);
 
-  const fid = context?.user?.fid;
+  const [fid, setFid] = useState<number | undefined>(undefined);
   const [paymentToken, setPaymentToken] = useState<`0x${string}` | null>(null);
   const [tokenDecimals, setTokenDecimals] = useState<number>(18); // Default to 18
   const [isApproved, setIsApproved] = useState(false);
@@ -255,7 +259,7 @@ export default function Main() {
     setTimeout(() => setBaseClicked(false), 500);
   };
 
-  async function sendMessage() {
+  async function sendMessage(recipientFid: number, message: string) {
     const res = await fetch("/api/dc", {
       method: "PUT",
       headers: {
@@ -263,8 +267,8 @@ export default function Main() {
         "idempotency-key": crypto.randomUUID(),
       },
       body: JSON.stringify({
-        recipientFid: context?.user?.fid,
-        message: `Trasaction successful!\n Basescan: https://basescan.org/tx/${hash}`,
+        recipientFid,
+        message,
       }),
     });
 
@@ -272,9 +276,41 @@ export default function Main() {
     console.log("Sent message:", data);
   }
 
+  const messageCount = useRef(0);
+
   useEffect(() => {
-    if (isTxSuccess && hash) {
-      sendMessage();
+    if (isTxSuccess && hash && context?.user?.fid) {
+      messageCount.current += 1;
+      const message =
+        messageCount.current === 1
+          ? "USDC Approved for Pro subscription"
+          : "You Subscribed Farcaster Pro for 30 days";
+      sendMessage(
+        context?.user?.fid,
+        `${message}!\nBasescan: https://basescan.org/tx/${hash}`
+      );
+    }
+  }, [isTxSuccess, hash]);
+
+  const searchParams = useSearchParams();
+  const castFid = searchParams.get("castFid");
+  useEffect(() => {
+    if (castFid) {
+      setFid(Number(castFid));
+    }
+  }, [context]);
+
+  useEffect(() => {
+    if (isTxSuccess && hash && castFid) {
+      const message =
+        messageCount.current === 1
+          ? "Approved USDC for your Pro subscription"
+          : "Gifted you Farcaster Pro for 30 days";
+
+      sendMessage(
+        Number(castFid),
+        `@${context?.user.username} ${message}.\n Basescan: https://basescan.org/tx/${hash}`
+      );
     }
   }, [isTxSuccess, hash]);
 
@@ -298,9 +334,11 @@ export default function Main() {
             Farcaster Pro
           </h1>
 
-          <div className="text-white text-center mb-8">
-            <div className="font-medium text-2xl mb-3">Subscription cost:</div>
-            <div className="text-4xl font-bold">
+          <div className="text-white text-center mb-5">
+            <div className="text-xl mb-1">subscribing for</div>
+            <div className="font-bold text-2xl">FID: {fid ?? "loading"}</div>
+            <div className="text-xl">
+              cost:{" "}
               {isPriceLoading
                 ? "Loading..."
                 : subscriptionPrice
