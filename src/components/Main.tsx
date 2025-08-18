@@ -281,10 +281,13 @@ export default function Main() {
   useEffect(() => {
     if (isTxSuccess && hash && context?.user?.fid) {
       messageCount.current += 1;
+      const subscriber = castFid
+        ? `You Gifted Farcaster Pro to FID: ${castFid} for 30 days`
+        : "You Subscribed Farcaster Pro for 30 days";
       const message =
         messageCount.current === 1
           ? "USDC Approved for Pro subscription"
-          : "You Subscribed Farcaster Pro for 30 days";
+          : subscriber;
       sendMessage(
         context?.user?.fid,
         `${message}!\nBasescan: https://basescan.org/tx/${hash}`
@@ -301,15 +304,11 @@ export default function Main() {
   }, [context]);
 
   useEffect(() => {
-    if (isTxSuccess && hash && castFid) {
-      const message =
-        messageCount.current === 1
-          ? "Approved USDC for your Pro subscription"
-          : "Gifted you Farcaster Pro for 30 days";
-
+    if (isTxSuccess && hash && castFid && messageCount.current === 2) {
+      const message = "Gifted you Farcaster Pro for 30 days";
       sendMessage(
         Number(castFid),
-        `@${context?.user.username} ${message}.\n Basescan: https://basescan.org/tx/${hash}`
+        `@${context?.user.username} ${message}.\nBasescan: https://basescan.org/tx/${hash}`
       );
     }
   }, [isTxSuccess, hash]);
