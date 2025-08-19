@@ -54,9 +54,6 @@ export default function Main() {
     const load = async () => {
       const context = await sdk.context;
       setContext(context);
-      if (context?.user?.fid) {
-        setFid(context.user.fid);
-      }
 
       sdk.actions.ready({});
     };
@@ -297,9 +294,12 @@ export default function Main() {
 
   const searchParams = useSearchParams();
   const castFid = searchParams.get("castFid");
+
   useEffect(() => {
     if (castFid) {
       setFid(Number(castFid));
+    } else if (context?.user?.fid) {
+      setFid(context.user.fid);
     }
   }, [context]);
 
