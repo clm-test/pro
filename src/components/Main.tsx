@@ -332,7 +332,6 @@ export default function Main() {
           <h1 className="fixed top-0 left-1/2 -translate-x-1/2 text-2xl font-bold text-white mt-8">
             Farcaster Pro
           </h1>
-
           <div className="text-white text-center mb-5">
             <div className="text-xl mb-1">subscribing for</div>
             <div className="font-bold text-2xl">FID: {fid ?? "loading"}</div>
@@ -360,7 +359,6 @@ export default function Main() {
               Price fetch error: {priceError.message}
             </p>
           )}
-
           <div className="flex gap-3">
             {!isApproved ? (
               <div>
@@ -481,8 +479,8 @@ export default function Main() {
                     <span className="relative z-10">
                       {isPending || isTxLoading
                         ? "Processing..."
-                        : isTxSuccess &&  messageCount.current === 2
-                        ? "Purchased, Cast it!"
+                        : isTxSuccess && messageCount.current === 2
+                        ? "Purchased!"
                         : "Purchase Pro for 30 days"}
                     </span>
                     <svg
@@ -540,8 +538,11 @@ export default function Main() {
           )}
           {error && <p className="text-red-600 w-screen hidden">{error}</p>}
           {writeError && (
-            <p className="text-red-600 w-screen hidden">Error: {writeError.message}</p>
-          )}
+            <p className="text-red-600 w-screen hidden">
+              Error: {writeError.message}
+            </p>
+          )}{" "}
+          <ShareButton />
         </div>
       )}
     </div>
@@ -691,6 +692,40 @@ export default function Main() {
           </div>
         </button>
       </div>
+    );
+  }
+
+  function ShareButton() {
+    const cast = async (): Promise<string | undefined> => {
+      try {
+        const result = await sdk.actions.composeCast({
+          text: `Purchase Farcaster Pro for 30 days with this miniapp by @cashlessman.eth`,
+          embeds: [`${process.env.NEXT_PUBLIC_URL}`],
+        });
+        return result.cast?.hash;
+      } catch (error) {
+        console.error("Error composing cast:", error);
+        return undefined;
+      }
+    };
+    return (
+      <button
+        onClick={cast}
+        className="fixed bottom-10 right-10 w-14 aspect-square border-2 border-white z-50 rounded-full p-3 bg-white/10 backdrop-blur-md hover:bg-white/20 transition duration-200 shadow-lg"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          className="w-6 h-6 text-white"
+        >
+          <path
+            fillRule="evenodd"
+            d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </button>
     );
   }
 }
