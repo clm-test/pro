@@ -481,6 +481,8 @@ export default function Main() {
                     <span className="relative z-10">
                       {isPending || isTxLoading
                         ? "Processing..."
+                        : isTxSuccess &&  messageCount.current === 2
+                        ? "Purchased, Cast it!"
                         : "Purchase Pro for 30 days"}
                     </span>
                     <svg
@@ -536,9 +538,9 @@ export default function Main() {
               </button>
             </div>
           )}
-          {error && <p className="text-red-600 w-screen">{error}</p>}
+          {error && <p className="text-red-600 w-screen hidden">{error}</p>}
           {writeError && (
-            <p className="text-red-600 w-screen">Error: {writeError.message}</p>
+            <p className="text-red-600 w-screen hidden">Error: {writeError.message}</p>
           )}
         </div>
       )}
