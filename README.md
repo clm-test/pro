@@ -136,6 +136,6 @@ Value: <your-generated-secret>
 
 ## ✅ You're All Set!
 
-Your Farcaster Mini App for DEGEN tipping is now ready to go live 🚀
+Your Farcaster Mini App is now ready to go live 🚀
 
 For questions, feel free to reach out or open an issue in the [GitHub repo](https://github.com/sah-ban/farcaster-pro/issues).
