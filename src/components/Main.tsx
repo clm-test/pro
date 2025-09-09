@@ -168,7 +168,7 @@ export default function Main() {
     tokenDecimals,
   ]);
 
-  const handleApprove = async () => {
+  const handleClick = async () => {
     setIsClicked(true);
     setTimeout(() => {
       if (!isConnected) {
@@ -183,64 +183,41 @@ export default function Main() {
         setError("Payment token or price not available.");
         return;
       }
-
-      try {
-        writeContract({
-          address: paymentToken,
-          abi: erc20Abi,
-          functionName: "approve",
-          args: [TIER_REGISTRY_ADDRESS, priceData],
-          chainId: base.id,
-        });
-        setIsApproved(true);
-      } catch (err: unknown) {
-        setError(
-          "Failed to approve token: " +
-            (err instanceof Error ? err.message : String(err))
-        );
-      }
-    }, 500);
-
-    setTimeout(() => setIsClicked(false), 500);
-  };
-
-  const handlePurchase = async () => {
-    setIsClicked(true);
-    setTimeout(() => {
-      if (!isConnected) {
-        setError("Please connect your wallet.");
-        return;
-      }
-      if (chain?.id !== base.id) {
-        setError("Please switch to the Base network.");
-        return;
-      }
-      if (!priceData) {
-        setError("Subscription price not available.");
-        return;
-      }
       if (!fid || isNaN(Number(fid))) {
         setError("No valid Farcaster ID found.");
         return;
       }
       if (!isApproved) {
-        setError("Please approve the token first.");
-        return;
-      }
-
-      try {
-        writeContract({
-          address: TIER_REGISTRY_ADDRESS,
-          abi: tierRegistryAbi,
-          functionName: "purchaseTier",
-          args: [BigInt(fid), 1, 30],
-          chainId: base.id,
-        });
-      } catch (err: unknown) {
-        setError(
-          "Failed to initiate purchase: " +
-            (err instanceof Error ? err.message : String(err))
-        );
+        try {
+          writeContract({
+            address: paymentToken,
+            abi: erc20Abi,
+            functionName: "approve",
+            args: [TIER_REGISTRY_ADDRESS, priceData],
+            chainId: base.id,
+          });
+          setIsApproved(true);
+        } catch (err: unknown) {
+          setError(
+            "Failed to approve token: " +
+              (err instanceof Error ? err.message : String(err))
+          );
+        }
+      } else {
+        try {
+          writeContract({
+            address: TIER_REGISTRY_ADDRESS,
+            abi: tierRegistryAbi,
+            functionName: "purchaseTier",
+            args: [BigInt(fid), 1, 30],
+            chainId: base.id,
+          });
+        } catch (err: unknown) {
+          setError(
+            "Failed to initiate purchase: " +
+              (err instanceof Error ? err.message : String(err))
+          );
+        }
       }
     }, 500);
 
@@ -289,6 +266,9 @@ export default function Main() {
         context?.user?.fid,
         `${message}!\nBasescan: https://basescan.org/tx/${hash}`
       );
+      if (messageCount.current === 1) {
+        handleClick();
+      }
     }
   }, [isTxSuccess, hash]);
 
@@ -405,147 +385,78 @@ export default function Main() {
             </p>
           )}
           <div className="flex gap-3">
-            {!isApproved ? (
-              <div>
-                <button
-                  onClick={handleApprove}
-                  disabled={
-                    isPending ||
-                    isTxLoading ||
-                    !isConnected ||
-                    chain?.id !== base.id ||
-                    !paymentToken
-                  }
-                  className="text-white text-center py-2 rounded-xl font-semibold text-lg shadow-lg relative overflow-hidden transform transition-all duration-200 hover:scale-110 active:scale-95 flex items-center justify-center gap-2"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, #8B5CF6, #7C3AED, #A78BFA, #8B5CF6)",
-                    backgroundSize: "300% 100%",
-                    animation: "gradientAnimation 3s infinite ease-in-out",
-                  }}
-                >
-                  <div
-                    className={`absolute inset-0 bg-[#38BDF8] transition-all duration-500 ${
-                      isClicked ? "scale-x-100" : "scale-x-0"
-                    }`}
-                    style={{ transformOrigin: "center" }}
-                  ></div>
-                  <style>{`
+            <div>
+              <button
+                onClick={handleClick}
+                disabled={
+                  isPending ||
+                  isTxLoading ||
+                  !isConnected ||
+                  chain?.id !== base.id ||
+                  !paymentToken
+                }
+                className="text-white text-center py-2 rounded-xl font-semibold text-lg shadow-lg relative overflow-hidden transform transition-all duration-200 hover:scale-110 active:scale-95 flex items-center justify-center gap-2"
+                style={{
+                  background:
+                    "linear-gradient(90deg, #8B5CF6, #7C3AED, #A78BFA, #8B5CF6)",
+                  backgroundSize: "300% 100%",
+                  animation: "gradientAnimation 3s infinite ease-in-out",
+                }}
+              >
+                <div
+                  className={`absolute inset-0 bg-[#38BDF8] transition-all duration-500 ${
+                    isClicked ? "scale-x-100" : "scale-x-0"
+                  }`}
+                  style={{ transformOrigin: "center" }}
+                ></div>
+                <style>{`
               @keyframes gradientAnimation {
                 0% { background-position: 0% 50%; }
                 50% { background-position: 100% 50%; }
                 100% { background-position: 0% 50%; }
               }
             `}</style>
-                  <div className="flex flex-row gap-2 px-5">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-6 h-6 relative z-10"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
-                      />
-                    </svg>{" "}
-                    <span className="relative z-10">
-                      {isPending || isTxLoading
-                        ? "Processing..."
-                        : "Approve USDC"}
-                    </span>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-6 h-6 relative z-10"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
-                      />
-                    </svg>{" "}
-                  </div>
-                </button>
-              </div>
-            ) : (
-              <div>
-                <button
-                  onClick={handlePurchase}
-                  disabled={
-                    isPending ||
-                    isTxLoading ||
-                    !isConnected ||
-                    chain?.id !== base.id ||
-                    !isApproved
-                  }
-                  className="text-white text-center py-2 rounded-xl font-semibold text-lg shadow-lg relative overflow-hidden transform transition-all duration-200 hover:scale-110 active:scale-95 flex items-center justify-center gap-2"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, #8B5CF6, #7C3AED, #A78BFA, #8B5CF6)",
-                    backgroundSize: "300% 100%",
-                    animation: "gradientAnimation 3s infinite ease-in-out",
-                  }}
-                >
-                  <div
-                    className={`absolute inset-0 bg-[#38BDF8] transition-all duration-500 ${
-                      isClicked ? "scale-x-100" : "scale-x-0"
-                    }`}
-                    style={{ transformOrigin: "center" }}
-                  ></div>
-                  <style>{`
-              @keyframes gradientAnimation {
-                0% { background-position: 0% 50%; }
-                50% { background-position: 100% 50%; }
-                100% { background-position: 0% 50%; }
-              }
-            `}</style>
-                  <div className="flex flex-row gap-2 px-5">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-6 h-6 relative z-10"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
-                      />
-                    </svg>{" "}
-                    <span className="relative z-10">
-                      {isPending || isTxLoading
-                        ? "Processing..."
-                        : isTxSuccess && messageCount.current === 2
-                        ? "Purchased!"
-                        : "Purchase Pro for 30 days"}
-                    </span>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-6 h-6 relative z-10"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
-                      />
-                    </svg>{" "}
-                  </div>
-                </button>
-              </div>
-            )}
+                <div className="flex flex-row gap-2 px-5">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-6 h-6 relative z-10"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
+                    />
+                  </svg>{" "}
+                  <span className="relative z-10">
+                    {isPending || isTxLoading
+                      ? "Processing..."
+                      : isTxSuccess && messageCount.current === 2 && castFid
+                      ? "Gifted!"
+                      : isTxSuccess && messageCount.current === 2 && !castFid
+                      ? "Purchased!"
+                      : "Purchase Pro for 30 days"}
+                  </span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-6 h-6 relative z-10"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
+                    />
+                  </svg>{" "}
+                </div>
+              </button>
+            </div>
           </div>
           {isTxSuccess && (
             <div className="mt-4 flex flex-col items-center">
