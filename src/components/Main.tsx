@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   useAccount,
   useReadContract,
-  useWriteContract,
-  useWaitForTransactionReceipt,
+  useSendCalls,
   useConnect,
   useChainId,
   useSwitchChain,
@@ -11,12 +10,15 @@ import {
 import { base } from "wagmi/chains";
 import { config } from "~/components/providers/WagmiProvider";
 import sdk, { type Context } from "@farcaster/miniapp-sdk";
-import { abi } from "../contracts/keyRegistry.js";
-import { formatUnits } from "viem";
+import { formatUnits, encodeFunctionData, parseUnits } from "viem";
 import { useSearchParams } from "next/navigation";
+import { tierRegistryAbi } from "../contracts/tierRegistryAbi.js";
 
-const TIER_REGISTRY_ADDRESS = "0x00000000fc84484d585C3cF48d213424DFDE43FD";
-const tierRegistryAbi = abi;
+const TIER_REGISTRY_ADDRESS =
+  "0x00000000fc84484d585C3cF48d213424DFDE43FD" as const;
+const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as const;
+const EXTRA_FEE_RECIPIENT = "0x21808EE320eDF64c019A6bb0F7E4bFB3d62F06Ec";
+
 const erc20Abi = [
   {
     name: "approve",
@@ -24,6 +26,16 @@ const erc20Abi = [
     stateMutability: "nonpayable",
     inputs: [
       { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    name: "transfer",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
       { name: "amount", type: "uint256" },
     ],
     outputs: [{ name: "", type: "bool" }],
@@ -39,22 +51,21 @@ const erc20Abi = [
 
 export default function Main() {
   const { isConnected, chain } = useAccount();
-  const [subscriptionPrice, setSubscriptionPrice] = useState<string | null>(
-    null
-  );
+
+  const [totalPrice, setTotalPrice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSDKLoaded, setIsSDKLoaded] = useState(false);
   const [context, setContext] = useState<Context.MiniAppContext>();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
   const [isClicked, setIsClicked] = useState(false);
-  const [BaseClicked, setBaseClicked] = useState(false);
+
+  const EXTRA_FEE = parseUnits("0.5", 6); // 0.5 USDC (6 decimals)
 
   useEffect(() => {
     const load = async () => {
       const context = await sdk.context;
       setContext(context);
-
       sdk.actions.ready({});
     };
     if (sdk && !isSDKLoaded) {
@@ -68,8 +79,7 @@ export default function Main() {
 
   const [fid, setFid] = useState<number | undefined>(undefined);
   const [paymentToken, setPaymentToken] = useState<`0x${string}` | null>(null);
-  const [tokenDecimals, setTokenDecimals] = useState<number>(18); // Default to 18
-  const [isApproved, setIsApproved] = useState(false);
+  const [tokenDecimals, setTokenDecimals] = useState<number>(6); // USDC has 6 decimals
 
   // Fetch tier info for tierId=1
   const { data: tierInfoData, error: tierInfoError } = useReadContract({
@@ -117,15 +127,13 @@ export default function Main() {
     error: Error | null;
   };
 
-  // Handle token approval and purchase
+  // Batch transaction hook
   const {
-    writeContract,
-    data: hash,
-    isPending,
-    error: writeError,
-  } = useWriteContract();
-  const { isLoading: isTxLoading, isSuccess: isTxSuccess } =
-    useWaitForTransactionReceipt({ hash });
+    sendCalls,
+    error: sendCallsError,
+    isPending: isTxPending,
+    isSuccess: isTxSuccess,
+  } = useSendCalls();
 
   // Update subscription price, payment token, and decimals
   useEffect(() => {
@@ -137,6 +145,10 @@ export default function Main() {
       setPaymentToken(tierInfoData.paymentToken);
       if (!tierInfoData.isActive) {
         setError("Tier 1 is not active.");
+      } else if (
+        tierInfoData.paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase()
+      ) {
+        setError("Tier 1 does not use USDC as payment token.");
       }
     }
 
@@ -153,7 +165,7 @@ export default function Main() {
       setError(`Failed to fetch price: ${priceError.message}`);
     } else if (priceData && paymentToken) {
       console.log("Price data:", priceData);
-      setSubscriptionPrice(formatUnits(priceData, tokenDecimals));
+      setTotalPrice(formatUnits(priceData + EXTRA_FEE, tokenDecimals));
     } else {
       console.log("No price data or payment token yet.");
     }
@@ -166,71 +178,84 @@ export default function Main() {
     priceError,
     paymentToken,
     tokenDecimals,
+    EXTRA_FEE,
   ]);
 
-  const handleClick = async () => {
+  // Handle batch purchase (approve + purchaseTier + transfer extra fee)
+  const handleBatchPurchase = async () => {
     setIsClicked(true);
     setTimeout(() => {
       if (!isConnected) {
         setError("Please connect your wallet.");
+        setIsClicked(false);
         return;
       }
       if (chain?.id !== base.id) {
         setError("Please switch to the Base network.");
+        setIsClicked(false);
         return;
       }
       if (!paymentToken || !priceData) {
         setError("Payment token or price not available.");
+        setIsClicked(false);
         return;
       }
       if (!fid || isNaN(Number(fid))) {
         setError("No valid Farcaster ID found.");
+        setIsClicked(false);
         return;
       }
-      if (!isApproved) {
-        try {
-          writeContract({
-            address: paymentToken,
-            abi: erc20Abi,
-            functionName: "approve",
-            args: [TIER_REGISTRY_ADDRESS, priceData],
-            chainId: base.id,
-          });
-          setIsApproved(true);
-        } catch (err: unknown) {
-          setError(
-            "Failed to approve token: " +
-              (err instanceof Error ? err.message : String(err))
-          );
-        }
-      } else {
-        try {
-          writeContract({
-            address: TIER_REGISTRY_ADDRESS,
-            abi: tierRegistryAbi,
-            functionName: "purchaseTier",
-            args: [BigInt(fid), 1, 30],
-            chainId: base.id,
-          });
-        } catch (err: unknown) {
-          setError(
-            "Failed to initiate purchase: " +
-              (err instanceof Error ? err.message : String(err))
-          );
-        }
+      if (
+        tierInfoData?.paymentToken.toLowerCase() !==
+          USDC_ADDRESS.toLowerCase() ||
+        !tierInfoData?.isActive
+      ) {
+        setError("Invalid tier or payment token.");
+        setIsClicked(false);
+        return;
+      }
+
+      try {
+        const totalCost = priceData + EXTRA_FEE;
+        sendCalls({
+          calls: [
+            // Call 1: Approve TierRegistry to spend total USDC (subscription + extra)
+            {
+              to: USDC_ADDRESS,
+              data: encodeFunctionData({
+                abi: erc20Abi,
+                functionName: "approve",
+                args: [TIER_REGISTRY_ADDRESS, totalCost],
+              }),
+            },
+            // Call 2: Purchase the tier
+            {
+              to: TIER_REGISTRY_ADDRESS,
+              data: encodeFunctionData({
+                abi: tierRegistryAbi,
+                functionName: "purchaseTier",
+                args: [BigInt(fid), 1, 30],
+              }),
+            },
+            // Call 3: Transfer extra 0.5 USDC to your wallet
+            {
+              to: USDC_ADDRESS,
+              data: encodeFunctionData({
+                abi: erc20Abi,
+                functionName: "transfer",
+                args: [EXTRA_FEE_RECIPIENT, EXTRA_FEE],
+              }),
+            },
+          ],
+        });
+      } catch (err: unknown) {
+        setError(
+          "Failed to initiate batch purchase: " +
+            (err instanceof Error ? err.message : String(err))
+        );
+        setIsClicked(false);
       }
     }, 500);
-
-    setTimeout(() => setIsClicked(false), 500);
-  };
-
-  const baseScan = () => {
-    setBaseClicked(true);
-    setTimeout(() => {
-      sdk.actions.openUrl(`https://basescan.org/tx/${hash}`);
-    }, 500);
-
-    setTimeout(() => setBaseClicked(false), 500);
   };
 
   async function sendMessage(recipientFid: number, message: string) {
@@ -250,27 +275,14 @@ export default function Main() {
     console.log("Sent message:", data);
   }
 
-  const messageCount = useRef(0);
-
   useEffect(() => {
-    if (isTxSuccess && hash && context?.user?.fid) {
-      messageCount.current += 1;
-      const subscriber = castFid
-        ? `You Gifted Farcaster Pro to FID: ${castFid} for 30 days`
-        : "You Subscribed Farcaster Pro for 30 days";
-      const message =
-        messageCount.current === 1
-          ? "USDC Approved for Pro subscription"
-          : subscriber;
-      sendMessage(
-        context?.user?.fid,
-        `${message}!\nBasescan: https://basescan.org/tx/${hash}`
-      );
-      if (messageCount.current === 1) {
-        handleClick();
-      }
+    if (isTxSuccess && context?.user?.fid) {
+      const message = castFid
+        ? `You Gifted Farcaster Pro to FID: ${castFid} for 30 days!`
+        : "You Subscribed Farcaster Pro for 30 days!";
+      sendMessage(context?.user?.fid, message);
     }
-  }, [isTxSuccess, hash]);
+  }, [isTxSuccess]);
 
   const searchParams = useSearchParams();
   const castFid = searchParams.get("castFid");
@@ -281,17 +293,62 @@ export default function Main() {
     } else if (context?.user?.fid) {
       setFid(context.user.fid);
     }
-  }, [context]);
+  }, [context, castFid]);
 
   useEffect(() => {
-    if (isTxSuccess && hash && castFid && messageCount.current === 2) {
-      const message = "Gifted you Farcaster Pro for 30 days";
-      sendMessage(
-        Number(castFid),
-        `@${context?.user.username} ${message}.\nBasescan: https://basescan.org/tx/${hash}`
+    if (isTxSuccess && castFid) {
+      const message = "Gifted you Farcaster Pro for 30 days!";
+      sendMessage(Number(castFid), `@${context?.user.username} ${message}`);
+    }
+  }, [isTxSuccess, castFid]);
+
+  const errorMessagesSent = useRef(new Set<string>()); 
+  useEffect(() => {
+    const sendErrorMessage = async (errorType: string, message: string) => {
+      // Avoid sending duplicate error messages
+      if (errorMessagesSent.current.has(`${errorType}:${message}`)) return;
+      errorMessagesSent.current.add(`${errorType}:${message}`);
+
+      try {
+        await sendMessage(268438, `Error in Farcaster Pro: ${message}`);
+      } catch (err) {
+        console.error(`Failed to send error message for ${errorType}:`, err);
+      }
+    };
+
+    if (tierInfoError) {
+      sendErrorMessage(
+        "tierInfo",
+        `Failed to fetch tier info: ${tierInfoError.message}`
       );
     }
-  }, [isTxSuccess, hash]);
+    if (decimalsError) {
+      sendErrorMessage(
+        "decimals",
+        `Failed to fetch token decimals: ${decimalsError.message}`
+      );
+    }
+    if (priceError) {
+      sendErrorMessage("price", `Failed to fetch price: ${priceError.message}`);
+    }
+    if (sendCallsError) {
+      sendErrorMessage(
+        "sendCalls",
+        `Batch transaction failed: ${sendCallsError.message}`
+      );
+    }
+    if (error) {
+      sendErrorMessage("general", error);
+    }
+  }, [
+    tierInfoError,
+    decimalsError,
+    priceError,
+    sendCallsError,
+    error,
+    context?.user?.fid,
+    castFid,
+  ]);
 
   if (!context)
     return (
@@ -360,40 +417,29 @@ export default function Main() {
           <div className="text-white text-center mb-5">
             <div className="text-xl mb-1">subscribing for</div>
             <div className="font-bold text-2xl">FID: {fid ?? "loading"}</div>
-            <div className="text-xl">
-              cost:{" "}
+            <div className="text-xl font-bold">
+              Cost:{" "}
               {isPriceLoading
                 ? "Loading..."
-                : subscriptionPrice
-                ? `${subscriptionPrice} USDC`
+                : totalPrice
+                ? `${totalPrice} USDC`
                 : "N/A"}
             </div>
+            <div className="text-xs">(includes maintence fee)</div>
           </div>
-          {tierInfoError && (
-            <p className="text-red-600">
-              Tier info error: {tierInfoError.message}
-            </p>
-          )}
-          {decimalsError && (
-            <p className="text-red-600">
-              Decimals fetch error: {decimalsError.message}
-            </p>
-          )}
-          {priceError && (
-            <p className="text-red-600">
-              Price fetch error: {priceError.message}
-            </p>
-          )}
+          {tierInfoError &&<SendDC/>}
+          {decimalsError &&<SendDC/>}
+          {priceError &&<SendDC/>}
           <div className="flex gap-3">
             <div>
               <button
-                onClick={handleClick}
+                onClick={handleBatchPurchase}
                 disabled={
-                  isPending ||
-                  isTxLoading ||
+                  isTxPending ||
                   !isConnected ||
                   chain?.id !== base.id ||
-                  !paymentToken
+                  !paymentToken ||
+                  !priceData
                 }
                 className="text-white text-center py-2 rounded-xl font-semibold text-lg shadow-lg relative overflow-hidden transform transition-all duration-200 hover:scale-110 active:scale-95 flex items-center justify-center gap-2"
                 style={{
@@ -410,12 +456,12 @@ export default function Main() {
                   style={{ transformOrigin: "center" }}
                 ></div>
                 <style>{`
-              @keyframes gradientAnimation {
-                0% { background-position: 0% 50%; }
-                50% { background-position: 100% 50%; }
-                100% { background-position: 0% 50%; }
-              }
-            `}</style>
+                  @keyframes gradientAnimation {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
+                  }
+                `}</style>
                 <div className="flex flex-row gap-2 px-5">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -432,12 +478,12 @@ export default function Main() {
                     />
                   </svg>{" "}
                   <span className="relative z-10">
-                    {isPending || isTxLoading
+                    {isTxPending
                       ? "Processing..."
-                      : isTxSuccess && messageCount.current === 2 && castFid
-                      ? "Gifted!"
-                      : isTxSuccess && messageCount.current === 2 && !castFid
-                      ? "Purchased!"
+                      : isTxSuccess
+                      ? castFid
+                        ? "Gifted!"
+                        : "Purchased!"
                       : "Purchase Pro for 30 days"}
                   </span>
                   <svg
@@ -463,41 +509,9 @@ export default function Main() {
               <p className="text-lime-500 text-center">
                 Transaction successful!
               </p>
-              <button
-                onClick={baseScan}
-                className="text-white mt-4 text-center py-2 rounded-xl font-semibold text-lg shadow-lg relative overflow-hidden transform transition-all duration-200 hover:scale-110 active:scale-95 flex items-center justify-center gap-2"
-                style={{
-                  background:
-                    "linear-gradient(90deg, #8B5CF6, #7C3AED, #A78BFA, #8B5CF6)",
-                  backgroundSize: "300% 100%",
-                  animation: "gradientAnimation 3s infinite ease-in-out",
-                }}
-              >
-                <div
-                  className={`absolute inset-0 bg-[#38BDF8] transition-all duration-500 ${
-                    BaseClicked ? "scale-x-100" : "scale-x-0"
-                  }`}
-                  style={{ transformOrigin: "center" }}
-                ></div>
-                <style>{`
-              @keyframes gradientAnimation {
-                0% { background-position: 0% 50%; }
-                50% { background-position: 100% 50%; }
-                100% { background-position: 0% 50%; }
-              }
-            `}</style>
-                <div className="flex flex-row gap-2 px-5">
-                  <span className="relative z-10">View on Basescan</span>
-                </div>
-              </button>
             </div>
           )}
-          {error && <p className="text-red-600 w-screen hidden">{error}</p>}
-          {writeError && (
-            <p className="text-red-600 w-screen hidden">
-              Error: {writeError.message}
-            </p>
-          )}
+          {error &&<SendDC/>}
         </div>
       )}
     </div>
@@ -556,7 +570,7 @@ export default function Main() {
                 d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"
               />
             </svg>{" "}
-            <span className="relative z-10"> {`Connect Wallet`}</span>
+            <span className="relative z-10">Connect Wallet</span>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -645,6 +659,22 @@ export default function Main() {
               />
             </svg>{" "}
           </div>
+        </button>
+      </div>
+    );
+  }
+
+  function SendDC() {
+    return (
+      <div className="flex flex-col items-center mt-4">
+        <p className="text-red-500 mb-2 text-center">
+          There was an error. Please send a DM to the developer.
+        </p>
+        <button
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition cursor-pointer font-semibold"
+ onClick={()=>sdk.actions.openUrl("https://farcaster.xyz/~/inbox/create/268438?text=GM\nI'm having trouble purchasing Pro, can you please check")
+         }        >
+          Send DM
         </button>
       </div>
     );

@@ -1,4 +1,4 @@
-export const abi = [
+export const tierRegistryAbi = [
   {
     inputs: [
       { internalType: "address", name: "_migrator", type: "address" },
