@@ -310,7 +310,7 @@ export default function Main() {
       errorMessagesSent.current.add(`${errorType}:${message}`);
 
       try {
-        await sendMessage(268438, `Error in Farcaster Pro: ${message}`);
+        await sendMessage(268438, `${context?.user.username}\n\n${message}`);
       } catch (err) {
         console.error(`Failed to send error message for ${errorType}:`, err);
       }
