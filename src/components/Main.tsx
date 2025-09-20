@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   useAccount,
   useReadContract,
@@ -258,6 +258,17 @@ export default function Main() {
     }, 500);
   };
 
+  const searchParams = useSearchParams();
+  const castFid = searchParams.get("castFid");
+
+  useEffect(() => {
+    if (castFid) {
+      setFid(Number(castFid));
+    } else if (context?.user?.fid) {
+      setFid(context.user.fid);
+    }
+  }, [context, castFid]);
+
   async function sendMessage(recipientFid: number, message: string) {
     const res = await fetch("/api/dc", {
       method: "PUT",
@@ -282,27 +293,16 @@ export default function Main() {
         : "You Subscribed Farcaster Pro for 30 days!";
       sendMessage(context?.user?.fid, message);
     }
-  }, [isTxSuccess]);
-
-  const searchParams = useSearchParams();
-  const castFid = searchParams.get("castFid");
-
-  useEffect(() => {
-    if (castFid) {
-      setFid(Number(castFid));
-    } else if (context?.user?.fid) {
-      setFid(context.user.fid);
-    }
-  }, [context, castFid]);
+  }, [isTxSuccess, context?.user?.fid, castFid]);
 
   useEffect(() => {
     if (isTxSuccess && castFid) {
       const message = "Gifted you Farcaster Pro for 30 days!";
       sendMessage(Number(castFid), `@${context?.user.username} ${message}`);
     }
-  }, [isTxSuccess, castFid]);
+  }, [isTxSuccess, castFid, context?.user.username]);
 
-  const errorMessagesSent = useRef(new Set<string>()); 
+  const errorMessagesSent = useRef(new Set<string>());
   useEffect(() => {
     const sendErrorMessage = async (errorType: string, message: string) => {
       // Avoid sending duplicate error messages
@@ -348,7 +348,103 @@ export default function Main() {
     error,
     context?.user?.fid,
     castFid,
+    context?.user.username,
   ]);
+  interface ApiResponse {
+    expires_at: number;
+  }
+
+  const [data, setData] = useState<ApiResponse | null>(null);
+
+  const proStatus = useCallback(async (fid: string) => {
+    try {
+      const response = await fetch(`/api/proStatus?fid=${fid}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const responseData = await response.json();
+
+      if (responseData) {
+        setData({
+          expires_at: responseData.expires_at,
+        });
+      } else {
+        throw new Error("Invalid response structure");
+      }
+    } catch (err) {
+      console.error("Error fetching followBack data", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (fid) {
+      proStatus(fid.toString());
+    }
+  }, [fid, proStatus]);
+
+  function getTimeUntil(timestamp: number): string {
+    const now = new Date();
+    const future = new Date(timestamp * 1000);
+
+    if (future <= now) {
+      return "No active subscription";
+    }
+
+    let years = 0;
+    let months = 0;
+    let days = 0;
+
+    const temp = new Date(now);
+
+    // Count years
+    while (
+      new Date(temp.getFullYear() + 1, temp.getMonth(), temp.getDate()) <=
+      future
+    ) {
+      temp.setFullYear(temp.getFullYear() + 1);
+      years++;
+    }
+
+    // Count months
+    while (
+      new Date(temp.getFullYear(), temp.getMonth() + 1, temp.getDate()) <=
+      future
+    ) {
+      temp.setMonth(temp.getMonth() + 1);
+      months++;
+    }
+
+    // Remaining ms
+    let diffTime = future.getTime() - temp.getTime();
+    days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    // Subtract days in ms
+    diffTime -= days * 24 * 60 * 60 * 1000;
+
+    // If less than a day, show hours/minutes/seconds
+    const hours = Math.floor(diffTime / (1000 * 60 * 60));
+    diffTime -= hours * 60 * 60 * 1000;
+
+    const minutes = Math.floor(diffTime / (1000 * 60));
+    diffTime -= minutes * 60 * 1000;
+
+    const seconds = Math.floor(diffTime / 1000);
+
+    const parts: string[] = [];
+    if (years > 0) parts.push(`${years} year${years > 1 ? "s" : ""}`);
+    if (months > 0) parts.push(`${months} month${months > 1 ? "s" : ""}`);
+    if (days > 0) parts.push(`${days} day${days > 1 ? "s" : ""}`);
+
+    if (years === 0 && months === 0 && days === 0) {
+      if (hours > 0) parts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
+      if (minutes > 0) parts.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
+      if (seconds > 0) parts.push(`${seconds} second${seconds > 1 ? "s" : ""}`);
+    }
+
+    return parts.length > 0
+      ? `Expires in ${parts.join(", ")}`
+      : "No active subscription";
+  }
 
   if (!context)
     return (
@@ -427,9 +523,9 @@ export default function Main() {
             </div>
             <div className="text-xs">(includes maintence fee)</div>
           </div>
-          {tierInfoError &&<SendDC/>}
-          {decimalsError &&<SendDC/>}
-          {priceError &&<SendDC/>}
+          {tierInfoError && <SendDC />}
+          {decimalsError && <SendDC />}
+          {priceError && <SendDC />}
           <div className="flex gap-3">
             <div>
               <button
@@ -456,12 +552,12 @@ export default function Main() {
                   style={{ transformOrigin: "center" }}
                 ></div>
                 <style>{`
-                  @keyframes gradientAnimation {
-                    0% { background-position: 0% 50%; }
-                    50% { background-position: 100% 50%; }
-                    100% { background-position: 0% 50%; }
-                  }
-                `}</style>
+            @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+            }
+          `}</style>
                 <div className="flex flex-row gap-2 px-5">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -511,7 +607,10 @@ export default function Main() {
               </p>
             </div>
           )}
-          {error &&<SendDC/>}
+          {error && <SendDC />}
+          <footer className="fixed bottom-0 left-0 w-full py-3 bg-slate-900 text-center text-white text-sm">
+            {getTimeUntil(data?.expires_at ?? 0)}
+          </footer>
         </div>
       )}
     </div>
@@ -672,8 +771,12 @@ export default function Main() {
         </p>
         <button
           className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition cursor-pointer font-semibold"
- onClick={()=>sdk.actions.openUrl("https://farcaster.xyz/~/inbox/create/268438?text=GM\nI'm having trouble purchasing Pro, can you please check")
-         }        >
+          onClick={() =>
+            sdk.actions.openUrl(
+              "https://farcaster.xyz/~/inbox/create/268438?text=GM\nI'm having trouble purchasing Pro, can you please check"
+            )
+          }
+        >
           Send DM
         </button>
       </div>
