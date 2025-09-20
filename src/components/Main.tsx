@@ -609,7 +609,9 @@ export default function Main() {
           )}
           {error && <SendDC />}
           <footer className="fixed bottom-0 left-0 w-full py-3 bg-slate-900 text-center text-white text-sm">
-            {data?.expires_at && getTimeUntil(data?.expires_at)}
+            {data?.expires_at
+              ? getTimeUntil(data?.expires_at)
+              : "loading subscription details"}
           </footer>
         </div>
       )}
