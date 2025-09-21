@@ -708,16 +708,19 @@ export default function Main() {
               </div>
             </div>
           </div>
-          <button
-            onClick={() =>
-              sdk.actions.viewCast({
-                hash: "0x8b41703ba1998102f5cac507493ba081061af5e6",
-              })
-            }
-            className="bg-[#7C3AED] text-white px-4 py-2 rounded-lg hover:bg-[#38BDF8] transition cursor-pointer font-semibold mt-4 w-2/3"
-          >
-            How to Gift
-          </button>
+          {!castFid && (
+            <button
+              onClick={() =>
+                sdk.actions.viewCast({
+                  hash: "0x8b41703ba1998102f5cac507493ba081061af5e6",
+                })
+              }
+              className="bg-[#7C3AED] text-white px-4 py-2 rounded-lg hover:bg-[#38BDF8] transition cursor-pointer font-semibold mt-4 w-2/3"
+            >
+              How to Gift
+            </button>
+          )}
+
           <div className="text-white text-center mb-5"></div>
           {tierInfoError && <SendDC />}
           {decimalsError && <SendDC />}
