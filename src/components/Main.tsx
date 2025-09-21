@@ -545,34 +545,11 @@ export default function Main() {
       ) : chainId !== base.id ? (
         <Switch />
       ) : (
-        <div>
-          <header className="flex-none fixed top-0 left-0 w-full p-7">
-            <h1 className="text-center text-2xl font-bold text-white mb-4">
+        <div className="flex flex-col items-center justify-center w-full">
+          <header className="flex-none fixed top-0 left-0 w-full p-4">
+            <h1 className="text-center text-2xl font-bold text-white">
               Farcaster Pro
             </h1>
-            <div className="flex justify-between items-center">
-              <button
-                onClick={() =>
-                  sdk.actions.viewCast({
-                    hash: "0x8b41703ba1998102f5cac507493ba081061af5e6",
-                  })
-                }
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition cursor-pointer font-semibold"
-              >
-                How to Gift
-              </button>
-              <button
-                onClick={() =>
-                  sdk.actions.composeCast({
-                    text: `Purchase and Gift Farcaster Pro for 30 days with this miniapp by @cashlessman.eth`,
-                    embeds: [`${process.env.NEXT_PUBLIC_URL}`],
-                  })
-                }
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition cursor-pointer font-semibold"
-              >
-                Share
-              </button>
-            </div>
           </header>
           <div className="text-white text-center mb-3 font-semibold">
             Price:{" "}
@@ -731,6 +708,16 @@ export default function Main() {
               </div>
             </div>
           </div>
+          <button
+            onClick={() =>
+              sdk.actions.viewCast({
+                hash: "0x8b41703ba1998102f5cac507493ba081061af5e6",
+              })
+            }
+            className="bg-[#7C3AED] text-white px-4 py-2 rounded-lg hover:bg-[#38BDF8] transition cursor-pointer font-semibold mt-4 w-2/3"
+          >
+            How to Gift
+          </button>
           <div className="text-white text-center mb-5"></div>
           {tierInfoError && <SendDC />}
           {decimalsError && <SendDC />}
@@ -744,16 +731,27 @@ export default function Main() {
             </div>
           )}
           {error && <SendDC />}
-          {!context?.client.added && (
-            <footer className="flex-none fixed bottom-0 left-0 w-full p-4 text-center">
+          <footer className="flex-none fixed bottom-0 left-0 w-full p-4 text-center">
+            <button
+              onClick={() =>
+                sdk.actions.composeCast({
+                  text: `Purchase and Gift Farcaster Pro for 30 days with this miniapp by @cashlessman.eth`,
+                  embeds: [`${process.env.NEXT_PUBLIC_URL}`],
+                })
+              }
+              className="bg-[#7C3AED] text-white px-4 py-2 rounded-lg hover:bg-[#38BDF8] transition cursor-pointer font-semibold w-full"
+            >
+              Share miniapp
+            </button>
+            {!context?.client.added && (
               <button
-                className="bg-[#7C3AED] text-white px-4 py-2 rounded-lg hover:bg-[#38BDF8] transition cursor-pointer font-semibold w-full"
+                className="bg-[#7C3AED] text-white px-4 py-2 rounded-lg hover:bg-[#38BDF8] transition cursor-pointer font-semibold w-full mt-2"
                 onClick={addMiniapp}
               >
                 {addMiniappResult || "Add Miniapp to Farcaster"}
               </button>
-            </footer>
-          )}
+            )}
+          </footer>
         </div>
       )}
     </div>
