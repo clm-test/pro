@@ -712,7 +712,7 @@ export default function Main() {
             <button
               onClick={() =>
                 sdk.actions.viewCast({
-                  hash: "0x8b41703ba1998102f5cac507493ba081061af5e6",
+                  hash: "0xaba31427ae981da207271a59e9e42aebd3c969af",
                 })
               }
               className="bg-[#7C3AED] text-white px-4 py-2 rounded-lg hover:bg-[#38BDF8] transition cursor-pointer font-semibold mt-4 w-2/3"
