@@ -30,7 +30,7 @@ export async function GET() {
       tagline: "Subscribe to Farcaster Pro",
       ogTitle: "Farcaster Pro",
       ogDescription:
-        "Subscribe to Farcaster Pro for exclusive features and support the development of the Farcaster ecosystem.",
+        "Subscribe to Farcaster Pro for exclusive features.",
       requiredChains: ["eip155:8453"],
       baseBuilder: {
         allowedAddresses: ["0x06e5B0fd556e8dF43BC45f8343945Fb12C6C3E90"],
