@@ -525,7 +525,7 @@ export default function Main() {
         <Switch />
       ) : (
         <div>
-          <header className="flex-none fixed top-0 left-0 w-full p-7">
+          <header className="flex-none fixed top-0 left-0 w-full p-7 text-white">
             <h1 className="text-center text-2xl font-bold text-white mb-4">
               Farcaster Pro
             </h1>
