@@ -7,12 +7,13 @@ import {
   useChainId,
   useSwitchChain,
 } from "wagmi";
-import { base } from "wagmi/chains";
+import { base } from "viem/chains";
 import { config } from "~/components/providers/WagmiProvider";
 import sdk, { type Context } from "@farcaster/miniapp-sdk";
 import { formatUnits, encodeFunctionData, parseUnits } from "viem";
 import { useSearchParams } from "next/navigation";
 import { tierRegistryAbi } from "../contracts/tierRegistryAbi.js";
+import Image from "next/image";
 
 const TIER_REGISTRY_ADDRESS =
   "0x00000000fc84484d585C3cF48d213424DFDE43FD" as const;
@@ -49,6 +50,21 @@ const erc20Abi = [
   },
 ];
 
+type Profile = {
+  fid: number;
+  username: string;
+  displayName: string;
+  bio: string;
+  location: string;
+  followerCount: number;
+  followingCount: number;
+  pfp: {
+    url: string;
+    verified: boolean;
+  };
+  accountLevel: string;
+};
+
 export default function Main() {
   const { isConnected, chain } = useAccount();
 
@@ -59,6 +75,9 @@ export default function Main() {
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
   const [isClicked, setIsClicked] = useState(false);
+
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const EXTRA_FEE = parseUnits("0.5", 6); // 0.5 USDC (6 decimals)
 
@@ -379,6 +398,7 @@ export default function Main() {
   useEffect(() => {
     if (fid) {
       proStatus(fid.toString());
+      fetchProfile(fid);
     }
   }, [fid, proStatus]);
 
@@ -446,6 +466,18 @@ export default function Main() {
       : "No active subscription";
   }
 
+  async function fetchProfile(fid: number) {
+    try {
+      const res = await fetch(`/api/profile?fid=${fid}`);
+      const data = await res.json();
+      setProfile(data);
+    } catch (err) {
+      console.error("Error fetching profile:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   if (!context)
     return (
       <div className="flex items-center justify-center h-screen bg-gray-900">
@@ -461,6 +493,18 @@ export default function Main() {
           >
             Open in Farcaster
           </div>
+        </div>
+      </div>
+    );
+
+  if (loading)
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-900">
+        <div className="flex flex-col items-center text-center">
+          <Image src="/loader.gif" alt="Loading" width={50} height={50} />
+          <p className="mt-2 text-gray-100 text-lg font-semibold">
+            Loading, please wait...
+          </p>
         </div>
       </div>
     );
@@ -509,25 +553,89 @@ export default function Main() {
               </button>
             </div>
           </header>
-
-          <div className="text-white text-center mb-5">
-            <div className="text-xl mb-1">subscribing for</div>
-            <div className="font-bold text-2xl">FID: {fid ?? "loading"}</div>
-            <div className="text-xl font-bold">
-              Cost:{" "}
-              {isPriceLoading
-                ? "Loading..."
-                : totalPrice
-                ? `${totalPrice} USDC`
-                : "N/A"}
-            </div>
-            <div className="text-xs">(includes maintence fee)</div>
+          <div className="text-white text-center mb-3 font-semibold">
+            Price:{" "}
+            {isPriceLoading
+              ? "Loading..."
+              : totalPrice
+              ? `$${Number(totalPrice).toFixed(2)}`
+              : "N/A"}
+            /month
           </div>
-          {tierInfoError && <SendDC />}
-          {decimalsError && <SendDC />}
-          {priceError && <SendDC />}
-          <div className="flex gap-3">
-            <div>
+
+          <div className="max-w-sm border rounded-2xl shadow-md p-4 bg-[#16101e]">
+            {/* Header */}
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <img
+                  src={profile?.pfp?.url}
+                  alt={profile?.displayName}
+                  className="w-16 h-16 rounded-full border"
+                />
+                {profile?.accountLevel && (
+                  <div className="absolute bottom-0 right-0 bg-white rounded-full p-0.5">
+                    <Image
+                      src="/verified.svg"
+                      alt="Verified"
+                      width={64}
+                      height={64}
+                      className="w-3.5 h-3.5"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h2 className="text-lg font-bold">{profile?.displayName}</h2>
+                <p className="text-gray-300">@{profile?.username}</p>
+                <span
+                  className="inline-flex items-center gap-1 text-xs font-semibold bg-purple-100 rounded-xl px-1.5 py-0.5"
+                  style={{
+                    color: data?.expires_at === 0 ? "#dc2626" : "#7c3aed",
+                  }}
+                >
+                  <Image
+                    src="/verified.svg"
+                    alt="Verified"
+                    width={64}
+                    height={64}
+                    className="w-3.5 h-3.5"
+                  />
+                  {data?.expires_at
+                    ? getTimeUntil(data?.expires_at)
+                    : "loading subscription details"}
+                </span>
+              </div>
+            </div>
+
+            {/* Bio */}
+            {profile?.bio && (
+              <p className="mt-3 text-sm whitespace-pre-line">{profile.bio}</p>
+            )}
+
+            {/* Location */}
+            {profile?.location && (
+              <p className="mt-2 text-xs text-gray-600">
+                📍 {profile?.location}
+              </p>
+            )}
+
+            {/* Stats */}
+            <div className="flex space-x-6 mt-3 text-sm">
+              <p>
+                <span className="font-semibold">{profile?.followingCount}</span>{" "}
+                Following
+              </p>
+              <p>
+                <span className="font-semibold">{profile?.followerCount}</span>{" "}
+                Followers
+              </p>
+              <p>
+                <span className="font-semibold">{fid ?? "loading"}</span> FID
+              </p>
+            </div>
+
+            <div className="mt-4">
               <button
                 onClick={handleBatchPurchase}
                 disabled={
@@ -598,21 +706,24 @@ export default function Main() {
                   </svg>{" "}
                 </div>
               </button>
+              <div className="text-xs text-center mt-2">
+                (includes maintence fee)
+              </div>
             </div>
           </div>
+          <div className="text-white text-center mb-5"></div>
+          {tierInfoError && <SendDC />}
+          {decimalsError && <SendDC />}
+          {priceError && <SendDC />}
+          <div className="flex gap-3"></div>
           {isTxSuccess && (
-            <div className="mt-4 flex flex-col items-center">
+            <div className="flex flex-col items-center">
               <p className="text-lime-500 text-center">
                 Transaction successful!
               </p>
             </div>
           )}
           {error && <SendDC />}
-          <footer className="fixed bottom-0 left-0 w-full py-3 bg-slate-900 text-center text-white text-sm">
-            {data?.expires_at
-              ? getTimeUntil(data?.expires_at)
-              : "loading subscription details"}
-          </footer>
         </div>
       )}
     </div>
