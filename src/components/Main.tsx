@@ -720,7 +720,6 @@ export default function Main() {
               How to Gift
             </button>
           )}
-
           <div className="text-white text-center mb-5"></div>
           {tierInfoError && <SendDC />}
           {decimalsError && <SendDC />}
