@@ -601,9 +601,9 @@ export default function Main() {
                     height={64}
                     className="w-3.5 h-3.5"
                   />
-                  {data?.expires_at
-                    ? getTimeUntil(data?.expires_at)
-                    : "loading subscription details"}
+                  {data?.expires_at == null
+                    ? "Loading subscription details"
+                    : getTimeUntil(data?.expires_at)}
                 </span>
               </div>
             </div>
