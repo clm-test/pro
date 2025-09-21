@@ -9,7 +9,7 @@ import {
 } from "wagmi";
 import { base } from "viem/chains";
 import { config } from "~/components/providers/WagmiProvider";
-import sdk, { type Context } from "@farcaster/miniapp-sdk";
+import sdk, { AddMiniApp, type Context } from "@farcaster/miniapp-sdk";
 import { formatUnits, encodeFunctionData, parseUnits } from "viem";
 import { useSearchParams } from "next/navigation";
 import { tierRegistryAbi } from "../contracts/tierRegistryAbi.js";
@@ -391,7 +391,7 @@ export default function Main() {
         throw new Error("Invalid response structure");
       }
     } catch (err) {
-      console.error("Error fetching followBack data", err);
+      console.error("Error fetching pro status", err);
     }
   }, []);
 
@@ -477,6 +477,27 @@ export default function Main() {
       setLoading(false);
     }
   }
+
+  const [addMiniappResult, setAddMiniappResult] = useState("");
+
+  const addMiniapp = useCallback(async () => {
+    try {
+      const result = await sdk.actions.addMiniApp();
+
+      setAddMiniappResult(
+        result.notificationDetails ? `Miniapp Added` : "rejected by user"
+      );
+    } catch (error) {
+      if (error instanceof AddMiniApp.RejectedByUser) {
+        setAddMiniappResult(`${error.message}`);
+      }
+
+      if (error instanceof AddMiniApp.InvalidDomainManifest) {
+        setAddMiniappResult(`${error.message}`);
+      }
+      setAddMiniappResult(`Error: ${error}`);
+    }
+  }, []);
 
   if (!context)
     return (
@@ -564,7 +585,6 @@ export default function Main() {
           </div>
 
           <div className="max-w-sm border rounded-2xl shadow-md p-4 bg-[#16101e] text-white">
-            {/* Header */}
             <div className="flex items-center space-x-4">
               <div className="relative">
                 <img
@@ -724,6 +744,16 @@ export default function Main() {
             </div>
           )}
           {error && <SendDC />}
+          {!context?.client.added && (
+            <footer className="flex-none fixed bottom-0 left-0 w-full p-4 text-center">
+              <button
+                className="bg-[#7C3AED] text-white px-4 py-2 rounded-lg hover:bg-[#38BDF8] transition cursor-pointer font-semibold w-full"
+                onClick={addMiniapp}
+              >
+                {addMiniappResult || "Add Miniapp to Farcaster"}
+              </button>
+            </footer>
+          )}
         </div>
       )}
     </div>
