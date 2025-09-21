@@ -525,7 +525,7 @@ export default function Main() {
         <Switch />
       ) : (
         <div>
-          <header className="flex-none fixed top-0 left-0 w-full p-7 text-white">
+          <header className="flex-none fixed top-0 left-0 w-full p-7">
             <h1 className="text-center text-2xl font-bold text-white mb-4">
               Farcaster Pro
             </h1>
@@ -563,7 +563,7 @@ export default function Main() {
             /month
           </div>
 
-          <div className="max-w-sm border rounded-2xl shadow-md p-4 bg-[#16101e]">
+          <div className="max-w-sm border rounded-2xl shadow-md p-4 bg-[#16101e] text-white">
             {/* Header */}
             <div className="flex items-center space-x-4">
               <div className="relative">
