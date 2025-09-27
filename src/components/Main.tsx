@@ -289,7 +289,7 @@ export default function Main() {
   }, [context, castFid]);
 
   async function sendMessage(recipientFid: number, message: string) {
-    const res = await fetch("/api/dc", {
+    await fetch("/api/dc", {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -300,15 +300,12 @@ export default function Main() {
         message,
       }),
     });
-
-    const data = await res.json();
-    console.log("Sent message:", data);
   }
 
   useEffect(() => {
     if (isTxSuccess && context?.user?.fid) {
       const message = castFid
-        ? `You Gifted Farcaster Pro to FID: ${castFid} for 30 days!`
+        ? `You Gifted Farcaster Pro to @${profile?.username} for 30 days!`
         : "You Subscribed Farcaster Pro for 30 days!";
       sendMessage(context?.user?.fid, message);
     }
