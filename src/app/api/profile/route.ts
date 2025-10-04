@@ -3,7 +3,6 @@ import axios from "axios";
 
 export async function GET(req: NextRequest) {
   const fid = req.nextUrl.searchParams.get("fid");
-  console.log(`Requested fid: ${fid}`);
 
   if (!fid) {
     return NextResponse.json({ error: "fid is required" }, { status: 400 });
