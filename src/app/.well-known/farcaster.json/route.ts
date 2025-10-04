@@ -5,9 +5,9 @@ export async function GET() {
     accountAssociation: {
       header:
         "eyJmaWQiOjI2ODQzOCwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDIxODA4RUUzMjBlREY2NGMwMTlBNmJiMEY3RTRiRkIzZDYyRjA2RWMifQ",
-      payload: "eyJkb21haW4iOiJwcm8tZmFyY2FzdGVyLnZlcmNlbC5hcHAifQ",
+      payload: "eyJkb21haW4iOiJwcm8uaXRzY2FzaGxlc3MuY29tIn0",
       signature:
-        "MHg4MDY2YWI4MzMwOGUwMTg2ZGEzMjQyMGEzMWJmODI5NmI4MzcyN2ZhODIxY2FjYWViNGE4YmY4YzllNmY2ZjUwNTMwNmZhODJjNmVlZjdlZTVkMjVhMmI2ZDI0NzYwZDllODYxOTI2YTcyN2VkZDU2MTAxY2U2NTBjMzNmYjE3MjFi",
+        "MHg3NDA1ZDhkMTdlNjYyMzM3NjFkMWUxNmZjYWFjZWYxMDg4ODBiZDg3NzNkN2EzNDNiM2M1ZTZhZWQ1YzczZTA2MDNjYTJkZjMwYjcyNTJkYWUzMGQwZTcyOTA1NTM4YmQxNzI2Zjg0OWRlZTNhMDEwZWYxZmYzZDg4MzlmZGU1ODFj",
     },
     frame: {
       version: "1",
@@ -29,9 +29,10 @@ export async function GET() {
       heroImageUrl: `${appUrl}/og.png`,
       tagline: "Subscribe to Farcaster Pro",
       ogTitle: "Farcaster Pro",
-      ogDescription:
-        "Subscribe to Farcaster Pro for exclusive features.",
+      ogDescription: "Subscribe to Farcaster Pro for exclusive features.",
       requiredChains: ["eip155:8453"],
+      canonicalDomain: "pro.itscashless.com",
+
       baseBuilder: {
         allowedAddresses: ["0x06e5B0fd556e8dF43BC45f8343945Fb12C6C3E90"],
       },
