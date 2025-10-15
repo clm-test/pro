@@ -14,6 +14,7 @@ import { formatUnits, encodeFunctionData, parseUnits } from "viem";
 import { useSearchParams } from "next/navigation";
 import { tierRegistryAbi } from "../contracts/tierRegistryAbi.js";
 import Image from "next/image";
+import LoadingScreen from "./Loading";
 
 const TIER_REGISTRY_ADDRESS =
   "0x00000000fc84484d585C3cF48d213424DFDE43FD" as const;
@@ -515,17 +516,7 @@ export default function Main() {
       </div>
     );
 
-  if (loading)
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-900">
-        <div className="flex flex-col items-center text-center">
-          <Image src="/loader.gif" alt="Loading" width={50} height={50} />
-          <p className="mt-2 text-gray-100 text-lg font-semibold">
-            Loading, please wait...
-          </p>
-        </div>
-      </div>
-    );
+  if (loading) return <LoadingScreen />;
 
   return (
     <div
