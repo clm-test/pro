@@ -14,7 +14,9 @@ import { formatUnits, encodeFunctionData, parseUnits } from "viem";
 import { useSearchParams } from "next/navigation";
 import { tierRegistryAbi } from "../contracts/tierRegistryAbi.js";
 import Image from "next/image";
+import axios from "axios";
 import LoadingScreen from "./Loading";
+import Toast from "./Toast";
 
 const TIER_REGISTRY_ADDRESS =
   "0x00000000fc84484d585C3cF48d213424DFDE43FD" as const;
@@ -305,19 +307,20 @@ export default function Main() {
 
   useEffect(() => {
     if (isTxSuccess && context?.user?.fid) {
-      const message = castFid
-        ? `You Gifted Farcaster Pro to @${profile?.username} for 30 days!`
-        : "You Subscribed Farcaster Pro for 30 days!";
+      const message =
+        context?.user?.fid === fid
+          ? `You Gifted Farcaster Pro to @${profile?.username} for 30 days!`
+          : "You Subscribed Farcaster Pro for 30 days!";
       sendMessage(context?.user?.fid, message);
     }
-  }, [isTxSuccess, context?.user?.fid, castFid]);
+  }, [isTxSuccess]);
 
   useEffect(() => {
-    if (isTxSuccess && castFid) {
+    if (isTxSuccess && context?.user?.fid !== fid) {
       const message = "Gifted you Farcaster Pro for 30 days!";
-      sendMessage(Number(castFid), `@${context?.user.username} ${message}`);
+      sendMessage(Number(fid), `@${context?.user.username} ${message}`);
     }
-  }, [isTxSuccess, castFid, context?.user.username]);
+  }, [isTxSuccess]);
 
   const errorMessagesSent = useRef(new Set<string>());
   useEffect(() => {
@@ -466,6 +469,7 @@ export default function Main() {
 
   async function fetchProfile(fid: number) {
     try {
+      setLoading(true);
       const res = await fetch(`/api/profile?fid=${fid}`);
       const data = await res.json();
       setProfile(data);
@@ -496,6 +500,7 @@ export default function Main() {
       setAddMiniappResult(`Error: ${error}`);
     }
   }, []);
+  const [showToast, setShowToast] = useState(false);
 
   if (!context)
     return (
@@ -526,7 +531,7 @@ export default function Main() {
         paddingLeft: context?.client.safeAreaInsets?.left ?? 0,
         paddingRight: context?.client.safeAreaInsets?.right ?? 0,
       }}
-      className="h-screen bg-slate-800 flex flex-col items-center justify-center"
+      className="h-screen bg-slate-900 flex flex-col items-center justify-center"
     >
       {!isConnected ? (
         <Connect />
@@ -534,20 +539,10 @@ export default function Main() {
         <Switch />
       ) : (
         <div className="flex flex-col items-center justify-center w-full">
-          <header className="flex-none fixed top-0 left-0 w-full p-4">
-            <h1 className="text-center text-2xl font-bold text-white">
-              Farcaster Pro
-            </h1>
+          <header className="flex-none fixed top-0 left-0 w-full">
+            <Search />
           </header>
-          <div className="text-white text-center mb-3 font-semibold">
-            Price:{" "}
-            {isPriceLoading
-              ? "Loading..."
-              : totalPrice
-              ? `$${Number(totalPrice).toFixed(2)}`
-              : "N/A"}
-            /month
-          </div>
+          {showToast && <Toast onClose={() => setShowToast(false)} />}
 
           <div className="max-w-sm border rounded-2xl shadow-md p-4 bg-[#16101e] text-white">
             <div className="flex items-center space-x-4">
@@ -670,10 +665,12 @@ export default function Main() {
                     {isTxPending
                       ? "Processing..."
                       : isTxSuccess
-                      ? castFid
+                      ? context?.user?.fid !== fid
                         ? "Gifted!"
                         : "Purchased!"
-                      : `${castFid ? "Gift" : "Purchase"} Pro for 30 days`}
+                      : `${
+                          context?.user?.fid !== fid ? "Gift" : "Purchase"
+                        } Pro for 30 days`}
                   </span>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -696,18 +693,15 @@ export default function Main() {
               </div>
             </div>
           </div>
-          {!castFid && (
-            <button
-              onClick={() =>
-                sdk.actions.viewCast({
-                  hash: "0xaba31427ae981da207271a59e9e42aebd3c969af",
-                })
-              }
-              className="bg-[#7C3AED] text-white px-4 py-2 rounded-lg hover:bg-[#38BDF8] transition cursor-pointer font-semibold mt-4 w-2/3"
-            >
-              How to Gift
-            </button>
-          )}
+          <div className="text-white text-center mt-3 font-semibold text-sm">
+            Price:{" "}
+            {isPriceLoading
+              ? "Loading..."
+              : totalPrice
+              ? `$${Number(totalPrice).toFixed(2)}`
+              : "N/A"}
+            /month
+          </div>
           <div className="text-white text-center mb-5"></div>
           {tierInfoError && <SendDC />}
           {decimalsError && <SendDC />}
@@ -722,17 +716,6 @@ export default function Main() {
           )}
           {error && <SendDC />}
           <footer className="flex-none fixed bottom-0 left-0 w-full p-4 text-center">
-            <button
-              onClick={() =>
-                sdk.actions.composeCast({
-                  text: `Purchase and Gift Farcaster Pro for 30 days with this miniapp by @cashlessman.eth`,
-                  embeds: [`${process.env.NEXT_PUBLIC_URL}`],
-                })
-              }
-              className="bg-[#7C3AED] text-white px-4 py-2 rounded-lg hover:bg-[#38BDF8] transition cursor-pointer font-semibold w-full"
-            >
-              Share miniapp
-            </button>
             {!context?.client.added && (
               <button
                 className="bg-[#7C3AED] text-white px-4 py-2 rounded-lg hover:bg-[#38BDF8] transition cursor-pointer font-semibold w-full mt-2"
@@ -910,6 +893,109 @@ export default function Main() {
         >
           Send DM
         </button>
+      </div>
+    );
+  }
+
+  function Search() {
+    const [searchValue, setSearchValue] = useState("");
+
+    const usernameToFid = useCallback(async (searchValue: string) => {
+      try {
+        const username = searchValue.includes("@")
+          ? searchValue.replace("@", "")
+          : searchValue;
+
+        const apiUrl = `${process.env.NEXT_PUBLIC_HubUrl}/v1/userNameProofByName?name=${username}`;
+        const response = await axios.get(apiUrl);
+        const searchFid = response.data.fid;
+
+        setFid(searchFid);
+      } catch {
+        setShowToast(true);
+        // console.error('Error fetching data:', error);
+      }
+    }, []);
+    return (
+      <div className="absolute top-0 flex flex-row w-full items-center justify-between bg-slate-900 p-2 border-b border-white/20 shadow-md">
+        <div className="flex items-center gap-3">
+          <input
+            className="w-[220px] p-2 bg-white/20 text-white text-base rounded-xl border border-white/30 focus:outline-none focus:ring-2 focus:ring-[#FFDEAD] placeholder-white/80"
+            type="text"
+            placeholder="Search a username to Gift"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                usernameToFid(searchValue);
+              }
+            }}
+          />
+          <div
+            className="bg-white/20 hover:bg-white/30 transition p-2 rounded-xl flex items-center justify-center cursor-pointer"
+            onClick={() => usernameToFid(searchValue)}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="white"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <div
+          className="bg-white/20 hover:bg-white/30 transition p-2 rounded-xl flex items-center justify-center cursor-pointer"
+          onClick={() =>
+            sdk.actions.viewCast({
+              hash: "0xaba31427ae981da207271a59e9e42aebd3c969af",
+            })
+          }
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="white"
+            viewBox="0 0 24 24"
+            className="w-6 h-6"
+          >
+            <path
+              fillRule="evenodd"
+              d="M12 2C6.477 2 2 6.478 2 12s4.477 10 10 10 10-4.478 10-10S17.523 2 12 2Zm0 5a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0V8a1 1 0 0 1 1-1Zm0 10.25a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5Z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </div>
+
+        <div
+          className="bg-white/20 hover:bg-white/30 transition p-2 rounded-xl flex items-center justify-center cursor-pointer"
+          onClick={() =>
+            sdk.actions.composeCast({
+              text: `Purchase and Gift Farcaster Pro for 30 days with this miniapp by @cashlessman.eth`,
+              embeds: [`${process.env.NEXT_PUBLIC_URL}`],
+            })
+          }
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="white"
+            className="w-6 h-6"
+          >
+            <path
+              fillRule="evenodd"
+              d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </div>
       </div>
     );
   }
