@@ -309,7 +309,7 @@ export default function Main() {
   useEffect(() => {
     if (isTxSuccess && context?.user?.fid) {
       const message =
-        context?.user?.fid === fid
+        context?.user?.fid !== fid
           ? `You Gifted Farcaster Pro to @${profile?.username} for 30 days!`
           : "You Subscribed Farcaster Pro for 30 days!";
       sendMessage(context?.user?.fid, message);
