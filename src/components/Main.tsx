@@ -569,7 +569,12 @@ export default function Main() {
                 <span
                   className="inline-flex items-center gap-1 text-xs font-semibold bg-purple-100 rounded-xl px-1.5 py-0.5"
                   style={{
-                    color: data?.expires_at === 0 ? "#dc2626" : "#7c3aed",
+                    color:
+                      new Date(
+                        data?.expires_at ? data?.expires_at * 1000 : Infinity
+                      ) <= new Date()
+                        ? "#dc2626"
+                        : "#7c3aed",
                   }}
                 >
                   <img
