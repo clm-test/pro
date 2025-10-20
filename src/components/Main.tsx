@@ -13,7 +13,6 @@ import sdk, { AddMiniApp, type Context } from "@farcaster/miniapp-sdk";
 import { formatUnits, encodeFunctionData, parseUnits } from "viem";
 import { useSearchParams } from "next/navigation";
 import { tierRegistryAbi } from "../contracts/tierRegistryAbi.js";
-import Image from "next/image";
 import axios from "axios";
 import LoadingScreen from "./Loading";
 import Toast from "./Toast";
@@ -555,11 +554,9 @@ export default function Main() {
                 />
                 {profile?.accountLevel && (
                   <div className="absolute bottom-0 right-0 bg-white rounded-full p-0.5">
-                    <Image
+                    <img
                       src="/verified.svg"
                       alt="Verified"
-                      width={64}
-                      height={64}
                       className="w-3.5 h-3.5"
                     />
                   </div>
@@ -575,13 +572,12 @@ export default function Main() {
                     color: data?.expires_at === 0 ? "#dc2626" : "#7c3aed",
                   }}
                 >
-                  <Image
+                  <img
                     src="/verified.svg"
                     alt="Verified"
-                    width={64}
-                    height={64}
                     className="w-3.5 h-3.5"
                   />
+
                   {data?.expires_at == null
                     ? "Loading subscription details"
                     : getTimeUntil(data?.expires_at)}
