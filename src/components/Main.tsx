@@ -512,7 +512,7 @@ export default function Main() {
           <div
             className="flex items-center justify-center text-center bg-indigo-800 p-3 rounded-lg mt-4 cursor-pointer"
             onClick={() =>
-              window.open("https://farcaster.xyz/cashlessman.eth/0x9cb4af72")
+              window.open("https://farcaster.xyz/miniapps/RXyuECl7a0po/farcaster-pro", "_blank")
             }
           >
             Open in Farcaster
