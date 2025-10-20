@@ -17,6 +17,7 @@ import Image from "next/image";
 import axios from "axios";
 import LoadingScreen from "./Loading";
 import Toast from "./Toast";
+import Confetti from "react-confetti";
 
 const TIER_REGISTRY_ADDRESS =
   "0x00000000fc84484d585C3cF48d213424DFDE43FD" as const;
@@ -712,6 +713,7 @@ export default function Main() {
               <p className="text-lime-500 text-center">
                 Transaction successful!
               </p>
+              <Confetti />
             </div>
           )}
           {error && <SendDC />}
