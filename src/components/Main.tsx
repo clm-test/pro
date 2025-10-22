@@ -307,6 +307,7 @@ export default function Main() {
 
   useEffect(() => {
     if (isTxSuccess && context?.user?.fid) {
+      sdk.haptics.notificationOccurred("success");
       const message =
         context?.user?.fid !== fid
           ? `You Gifted Farcaster Pro to @${profile?.username} for 30 days!`
@@ -512,7 +513,10 @@ export default function Main() {
           <div
             className="flex items-center justify-center text-center bg-indigo-800 p-3 rounded-lg mt-4 cursor-pointer"
             onClick={() =>
-              window.open("https://farcaster.xyz/miniapps/RXyuECl7a0po/farcaster-pro", "_blank")
+              window.open(
+                "https://farcaster.xyz/miniapps/RXyuECl7a0po/farcaster-pro",
+                "_blank"
+              )
             }
           >
             Open in Farcaster
