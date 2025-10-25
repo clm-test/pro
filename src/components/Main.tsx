@@ -985,7 +985,7 @@ export default function Main() {
           className="bg-white/20 hover:bg-white/30 transition p-2 rounded-xl flex items-center justify-center cursor-pointer"
           onClick={() =>
             sdk.actions.composeCast({
-              text: `Purchase and Gift Farcaster Pro for 30 days with this miniapp by @cashlessman.eth`,
+              text: `Subscribe and Gift Farcaster Pro for 30 days with this miniapp by @cashlessman.eth`,
               embeds: [`${process.env.NEXT_PUBLIC_URL}`],
             })
           }
