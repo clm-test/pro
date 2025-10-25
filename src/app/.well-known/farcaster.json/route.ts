@@ -15,7 +15,7 @@ export async function GET() {
       iconUrl: `${appUrl}/logo.png`,
       homeUrl: appUrl,
       imageUrl: `${appUrl}/og.png`,
-      buttonTitle: "subscribe for 30 days",
+      buttonTitle: "subscribe",
       splashImageUrl: `${appUrl}/splash.png`,
       splashBackgroundColor: "#8660cc",
       castShareUrl: appUrl,

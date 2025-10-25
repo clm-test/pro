@@ -10,7 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
     version: "next",
     imageUrl: `${appUrl}/og.png`,
     button: {
-      title: "subscribe for 30 days",
+      title: "subscribe",
       action: {
         type: "launch_frame",
         name: "Farcaster Pro",
