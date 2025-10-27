@@ -727,7 +727,7 @@ export default function Main() {
             /month
           </div>{" "}
           {userBalance < Number(totalPrice) && (
-            <p>Your Balance: {userBalance.toFixed(2)} USDC</p>
+            <p className="text-white text-center mt-3 font-semibold text-sm">Your Balance: {userBalance.toFixed(2)} USDC</p>
           )}
           <div className="text-white text-center mb-5"></div>
           {tierInfoError && <SendDC />}
