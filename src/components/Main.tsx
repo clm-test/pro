@@ -727,7 +727,9 @@ export default function Main() {
             /month
           </div>{" "}
           {userBalance < Number(totalPrice) && (
-            <p className="text-white text-center mt-3 font-semibold text-sm">Your Balance: {userBalance.toFixed(2)} USDC</p>
+            <p className="text-white text-center mt-3 font-semibold text-sm">
+              Your Balance: {userBalance.toFixed(2)} USDC
+            </p>
           )}
           <div className="text-white text-center mb-5"></div>
           {tierInfoError && <SendDC />}
@@ -744,7 +746,13 @@ export default function Main() {
           )}
           {error && <SendDC />}
           <footer className="flex-none fixed bottom-0 left-0 w-full p-4 text-center text-white">
-            Please use farcaster wallet on Mobile <br/> for better experience.
+           <div> Please use farcaster wallet on Mobile <br /> for better experience.</div>
+            <button
+              className="bg-[#7C3AED] text-white px-4 py-2 rounded-lg hover:bg-[#38BDF8] transition cursor-pointer font-semibold w-1/2 mt-2"
+              onClick={() => sdk.actions.viewProfile({ fid: 268438 })}
+            >
+              Follow dev
+            </button>
             {!context?.client.added && (
               <button
                 className="bg-[#7C3AED] text-white px-4 py-2 rounded-lg hover:bg-[#38BDF8] transition cursor-pointer font-semibold w-full mt-2"
