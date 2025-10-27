@@ -6,6 +6,7 @@ import {
   useConnect,
   useChainId,
   useSwitchChain,
+  useBalance,
 } from "wagmi";
 import { base } from "viem/chains";
 import { config } from "~/components/providers/WagmiProvider";
@@ -69,7 +70,7 @@ type Profile = {
 };
 
 export default function Main() {
-  const { isConnected, chain } = useAccount();
+  const { isConnected, chain, address } = useAccount();
 
   const [totalPrice, setTotalPrice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -236,7 +237,14 @@ export default function Main() {
         setIsClicked(false);
         return;
       }
-
+      if (
+        userBalance < Number(formatUnits(priceData + EXTRA_FEE, tokenDecimals))
+      ) {
+        setToastMessage("Insufficient USDC balance");
+        setShowToast(true);
+        setIsClicked(false);
+        return;
+      }
       try {
         const totalCost = priceData + EXTRA_FEE;
         sendCalls({
@@ -502,6 +510,15 @@ export default function Main() {
     }
   }, []);
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+
+  const { data: balance } = useBalance({
+    address,
+    token: USDC_ADDRESS,
+    chainId: base.id,
+  });
+
+  const userBalance = balance ? Number(formatUnits(balance.value, 6)) : 0;
 
   if (!context)
     return (
@@ -546,8 +563,9 @@ export default function Main() {
           <header className="flex-none fixed top-0 left-0 w-full">
             <Search />
           </header>
-          {showToast && <Toast onClose={() => setShowToast(false)} />}
-
+          {showToast && (
+            <Toast message={toastMessage} onClose={() => setShowToast(false)} />
+          )}
           <div className="max-w-sm border rounded-2xl shadow-md p-4 bg-[#16101e] text-white">
             <div className="flex items-center space-x-4">
               <div className="relative">
@@ -707,7 +725,10 @@ export default function Main() {
               ? `$${Number(totalPrice).toFixed(2)}`
               : "N/A"}
             /month
-          </div>
+          </div>{" "}
+          {userBalance < Number(totalPrice) && (
+            <p>Your Balance: {userBalance.toFixed(2)} USDC</p>
+          )}
           <div className="text-white text-center mb-5"></div>
           {tierInfoError && <SendDC />}
           {decimalsError && <SendDC />}
@@ -919,6 +940,7 @@ export default function Main() {
 
         setFid(searchFid);
       } catch {
+        setToastMessage("Please enter a valid username");
         setShowToast(true);
         // console.error('Error fetching data:', error);
       }
