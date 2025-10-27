@@ -743,7 +743,7 @@ export default function Main() {
             </div>
           )}
           {error && <SendDC />}
-          <footer className="flex-none fixed bottom-0 left-0 w-full p-4 text-center">
+          <footer className="flex-none fixed bottom-0 left-0 w-full p-4 text-center text-white">
             Please use farcaster wallet on Mobile <br/> for better experience.
             {!context?.client.added && (
               <button
