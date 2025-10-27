@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 
 interface ToastProps {
+  message: string;
   duration?: number;
   onClose: () => void;
 }
-
-const Toast: React.FC<ToastProps> = ({ duration = 3000, onClose }) => {
+const Toast: React.FC<ToastProps> = ({ message, duration = 3000, onClose }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [progress, setProgress] = useState(100);
   const startTimeRef = useRef<number>(Date.now());
@@ -36,7 +36,7 @@ const Toast: React.FC<ToastProps> = ({ duration = 3000, onClose }) => {
     <div className="fixed top-16 inset-x-0 mx-auto w-fit z-50 flex flex-col items-center animate-slide-down">
       <div className="relative bg-gradient-to-br from-red-500 to-red-600 text-white px-4 py-3 rounded-xl shadow-lg border border-red-400/40 w-full overflow-hidden">
         <div className="flex items-center font-semibold text-sm sm:text-base">
-          Please enter a valid username
+          {message}
         </div>
 
         <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-white/10 animate-shimmer" />
